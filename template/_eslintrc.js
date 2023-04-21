@@ -4,6 +4,7 @@ module.exports = {
   root: true,
   rules: {
     'import/order': 'off',
+    radix: ['error', 'as-needed'],
     'simple-import-sort/exports': 'error',
     'simple-import-sort/imports': 'error',
     'sort-imports': 'off',

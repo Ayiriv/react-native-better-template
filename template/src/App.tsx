@@ -1,108 +1,133 @@
-import React from 'react'
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native'
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen'
+import { useActionSheet } from '@expo/react-native-action-sheet'
+import { Chat, MessageType } from '@flyerhq/react-native-chat-ui'
+import { PreviewData } from '@flyerhq/react-native-link-preview'
+import React, { useState } from 'react'
+import DocumentPicker from 'react-native-document-picker'
+import FileViewer from 'react-native-file-viewer'
+import { launchImageLibrary } from 'react-native-image-picker'
+import { v4 as uuidv4 } from 'uuid'
 
-const Section: React.FC<{
-  title: string
-}> = ({ children, title }) => {
-  const isDarkMode = useColorScheme() === 'dark'
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}
-      >
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}
-      >
-        {children}
-      </Text>
-    </View>
-  )
-}
+import data from './messages.json'
 
 const App = () => {
-  const isDarkMode = useColorScheme() === 'dark'
+  const { showActionSheetWithOptions } = useActionSheet()
+  const [messages, setMessages] = useState(data as MessageType.Any[])
+  const user = { id: '06c33e8b-e835-4736-80f4-63f44b66666c' }
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const addMessage = (message: MessageType.Any) => {
+    setMessages([message, ...messages])
+  }
+
+  const handleAttachmentPress = () => {
+    showActionSheetWithOptions(
+      {
+        options: ['Photo', 'File', 'Cancel'],
+        cancelButtonIndex: 2,
+      },
+      (buttonIndex) => {
+        switch (buttonIndex) {
+          case 0:
+            handleImageSelection()
+            break
+          case 1:
+            handleFileSelection()
+            break
+        }
+      }
+    )
+  }
+
+  const handleFileSelection = async () => {
+    try {
+      const response = await DocumentPicker.pickSingle({
+        type: [DocumentPicker.types.allFiles],
+      })
+      const fileMessage: MessageType.File = {
+        author: user,
+        createdAt: Date.now(),
+        id: uuidv4(),
+        mimeType: response.type ?? undefined,
+        name: response.name,
+        size: response.size ?? 0,
+        type: 'file',
+        uri: response.uri,
+      }
+      addMessage(fileMessage)
+    } catch {}
+  }
+
+  const handleImageSelection = () => {
+    launchImageLibrary(
+      {
+        includeBase64: true,
+        maxWidth: 1440,
+        mediaType: 'photo',
+        quality: 0.7,
+      },
+      ({ assets }) => {
+        const response = assets?.[0]
+
+        if (response?.base64) {
+          const imageMessage: MessageType.Image = {
+            author: user,
+            createdAt: Date.now(),
+            height: response.height,
+            id: uuidv4(),
+            name: response.fileName ?? response.uri?.split('/').pop() ?? '🖼',
+            size: response.fileSize ?? 0,
+            type: 'image',
+            uri: `data:image/*;base64,${response.base64}`,
+            width: response.width,
+          }
+          addMessage(imageMessage)
+        }
+      }
+    )
+  }
+
+  const handleMessagePress = async (message: MessageType.Any) => {
+    if (message.type === 'file') {
+      try {
+        await FileViewer.open(message.uri, { showOpenWithDialog: true })
+      } catch {}
+    }
+  }
+
+  const handlePreviewDataFetched = ({
+    message,
+    previewData,
+  }: {
+    message: MessageType.Text
+    previewData: PreviewData
+  }) => {
+    setMessages(
+      messages.map<MessageType.Any>((m) =>
+        m.id === message.id ? { ...m, previewData } : m
+      )
+    )
+  }
+
+  const handleSendPress = (message: MessageType.PartialText) => {
+    const textMessage: MessageType.Text = {
+      author: user,
+      createdAt: Date.now(),
+      id: uuidv4(),
+      text: message.text,
+      type: 'text',
+    }
+    addMessage(textMessage)
   }
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView
-        contentInsetAdjustmentBehavior='automatic'
-        style={backgroundStyle}
-      >
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}
-        >
-          <Section title='Step One'>
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title='See Your Changes'>
-            <ReloadInstructions />
-          </Section>
-          <Section title='Debug'>
-            <DebugInstructions />
-          </Section>
-          <Section title='Learn More'>
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Chat
+      messages={messages}
+      onAttachmentPress={handleAttachmentPress}
+      onMessagePress={handleMessagePress}
+      onPreviewDataFetched={handlePreviewDataFetched}
+      onSendPress={handleSendPress}
+      user={user}
+    />
   )
 }
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-})
 
 export default App
