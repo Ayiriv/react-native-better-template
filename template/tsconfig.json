@@ -2,12 +2,23 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "jsx": "react-native",
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "module": "CommonJS",
     "noEmit": true,
     "skipLibCheck": true,
     "strict": true,
     "target": "ESNext",
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ],
+  "baseUrl": ".",
+  "paths": {
+    "@flyerhq/react-native-chat-ui": [
+      "../src"
+    ]
+  },
+  "resolveJsonModule": true
 }

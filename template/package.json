@@ -42,5 +42,7 @@
       "json",
       "node"
     ]
-  }
+  },
+  "generate-messages": "node scripts/generateMessages.js",
+  "prepare": "yarn generate-messages"
 }
